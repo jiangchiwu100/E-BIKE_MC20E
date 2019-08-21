@@ -498,45 +498,6 @@ int get_recv_len(char *s,char find,int num)
 	return rev;
 }
 
-int get_uart_data_ext(char*buf, int count)
-{
-	uint16_t ulen = module_recv_write_index;
-
-	if (ulen > 0)
-	{
-	//	Logln(D_INFO,"get_uart_data_ext rcv=%d,%d",ulen,count);
-		if (count >= ulen)
-		{
-			memcpy(buf, module_recv_buffer, ulen);
-			buf[ulen] = 0;
-		//	Logln(D_INFO,"rcv=%d,%s",ulen,buf);
-			return ulen;
-		}
-		else
-		{
-			char* pDst = module_recv_buffer;
-			char* pSrc = module_recv_buffer + count;
-			char* pDstEnd = pDst + (ulen - count);
-
-			memcpy(buf, module_recv_buffer, count);
-			buf[count] = 0;
-			Logln(D_INFO,"2--%s",buf);
-
-			for (; pDst < pDstEnd; ++pDst, ++pSrc)
-			{
-				*pDst = *pSrc;
-			}
-			
-			module_recv_write_index = ulen - count;
-			return count;
-		}
-	}
-	else
-	{
-		return 0;
-	}	
-}
-
 int get_uart_data(char*buf, int count)
 {
 	uint16_t ulen = module_recv_write_index;
