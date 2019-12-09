@@ -327,6 +327,59 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 	}
 }
 
+/*通过串口2跟控制器的读取，写入命令的接口，频率不用太快，因此放入1S的函数中调用*/
+void control_process(void)
+{
+	static uint8_t index=0;
+
+	if(index==0)
+	{
+		zt_controller_send(ADDR_CONTROL, CMD_READ, 0x00, 0x00);
+	}
+
+	if(controller.require.tiaosu != controller.actual.tiaosu && index==1)
+	{
+		zt_controller_send(ADDR_CONTROL, CMD_CONTROL,1,controller.require.tiaosu);
+	}
+
+	if(controller.require.qianya != controller.actual.qianya && index==2)
+	{
+		zt_controller_send(ADDR_CONTROL, CMD_CONTROL,2,controller.require.qianya);
+	}
+
+	if(controller.require.zhuli != controller.actual.zhuli && index==3)
+	{
+		zt_controller_send(ADDR_CONTROL, CMD_CONTROL,3,controller.require.zhuli);
+	}
+
+	if(controller.require.xf != controller.actual.xf && index==4)
+	{
+//		zt_controller_send(ADDR_CONTROL, CMD_CONTROL,4,controller.require.xf);
+	}
+
+	if(controller.require.dy != controller.actual.dy && index==5)
+	{
+		zt_controller_send(ADDR_CONTROL, CMD_CONTROL,5,controller.require.dy);
+	}
+/*	zt_controller_send(ADDR_BAT, bat_temp, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_vol, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_curr, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_cap, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_total_cap, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_cycle, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_interval, 0x00, 0x00);
+	zt_controller_send(ADDR_BAT, bat_max_interval, 0x00, 0x00);*/
+
+	if(index >= 5)
+	{
+		index=0;
+	}
+	else
+	{
+		index++;
+	}
+}
+
 void get_ebike_data(ebike_pkg_struct* ebike_pkg)
 {
 	ebike_struct ebike;
@@ -592,7 +645,7 @@ void init_flash(void)
 		g_flash.motor = 0;
 		g_flash.ld_alarm = 0;
 		g_flash.zd_alarm = 0;
-		g_flash.zd_sen = 80;
+		g_flash.zd_sen = 200;
 		g_flash.search_times = 3;
 		g_flash.gb_alarm = 0;
 		g_flash.gb_speed = 15;

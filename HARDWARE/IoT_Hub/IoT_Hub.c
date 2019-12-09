@@ -90,7 +90,7 @@ AT_STRUCT at_pack[]={
 	{AT_QGEPOAID,"AT+QGEPOAID","OK",500,NULL},	
 	{AT_QGEPOF,"", "OK", 500,NULL},
 	
-	{AT_BT_ON,"AT+QBTPWR=1","OK",3000,NULL},
+	{AT_BT_ON,"AT+QBTPWR=1","OK",5000,NULL},
 	{AT_BT_OFF,"AT+QBTPWR=0","OK",300,NULL},
 	{AT_BT_ADDR,"AT+QBTLEADDR?","OK",300,parse_bt_addr_cmd},
 	{AT_BT_NAME,"","OK",300,NULL},
@@ -117,7 +117,7 @@ AT_STRUCT at_pack[]={
 void MODULE_RST(void)
 {
 	MODULE_RST_H;
-	HAL_Delay(1500);
+	HAL_Delay(3000);
 	MODULE_RST_L;
 	HAL_Delay(100);
 }
@@ -1013,25 +1013,24 @@ bool at_parse_recv(void)
 	}
 }
 
-void bt_init(void)
+bool bt_init(void)
 {
-	Send_AT_Command_Timeout(AT_BT_ON, 3);
+	if(!Send_AT_Command_Timeout(AT_BT_ON, 3))return false;
 	Send_AT_Command_Timeout(AT_BT_ADDR, 1);
 	Send_AT_Command_Timeout(AT_BT_Q_NAME, 1);
 	judge_change_bt_name();
-	Send_AT_Command_Timeout(AT_QBTGATSREG, 2);
+	if(!Send_AT_Command_Timeout(AT_QBTGATSREG, 2))return false;
 	Send_AT_Command_Timeout(AT_QBTGATSL, 2);
 	
 	Send_AT_Command_Timeout(AT_QBTGATSS, 2);
 	Send_AT_Command_Timeout(AT_QBTGATSC, 2);
 	Send_AT_Command_Timeout(AT_QBTGATSD, 2);
-	Send_AT_Command_Timeout(AT_QBTGATSST, 2);
+	if(!Send_AT_Command_Timeout(AT_QBTGATSST, 2))return false;
 	Send_AT_Command_Timeout(AT_BT_VISB, 2);
 	
 	Send_AT_Command_Timeout(AT_QBTLETXPWR, 1);
 	Send_AT_Command_Timeout(AT_QBTLETXPWR_Q, 1);
 	Send_AT_Command_Timeout(AT_QBTGATADV, 2);
-
 }
 
 void AT_QGREFLOC_FUN(void)
@@ -1065,7 +1064,7 @@ void gnss_init(void)
 	Send_AT_Command_Timeout(AT_QGPS_ON, 2);   	
 	Send_AT_Command_Timeout(AT_QGNSSTS, 2); 	
 }
-void module_init(void)
+bool module_init(void)
 {
 	Logln(D_INFO, "IOT_module Start Init");
 
@@ -1083,19 +1082,23 @@ void module_init(void)
 	Send_AT_Command_Timeout(AT_CPIN, 5);
 	Send_AT_Command_Timeout(AT_GSN, 2);
 	Send_AT_Command_Timeout(AT_CIMI, 2);
-	Send_AT_Command_Timeout(AT_CREG, 20);
-	bt_init();
+	Send_AT_Command_Timeout(AT_CREG, 20);	
 	Send_AT_Command_Timeout(AT_QIMODE, 1);
 	Send_AT_Command_Timeout(AT_QICSGP, 2);     
 	Send_AT_Command_Timeout(AT_QIREGAPP, 2);	
 	Send_AT_Command_Timeout(AT_QIACT, 5);		
 	Send_AT_Command_Timeout(AT_COPS, 2);
+	if(!bt_init())	//蓝牙初始化失败重启模块
+	{
+		return false;
+	}	
 	miaoding();
 //	gnss_init();
 	
 	Send_AT_Command_Timeout(AT_QIFGCNT1, 2);     
 	Send_AT_Command_Timeout(AT_QIDNSIP, 2);
 
+	return true;
 	Logln(D_INFO,"Init Complete");
 
 }
@@ -1164,8 +1167,10 @@ void at_process(void)
 		MODULE_RST();
 		HAL_Delay(3000);
 		gsm_led_flag = 1;
-		module_init();
-		net_work_state = EN_CONNECT_STATE;
+		if(!module_init())	//初始化失败重启模块
+			net_work_state = EN_INIT_STATE;
+		else
+			net_work_state = EN_CONNECT_STATE;
 	}
 	else if(net_work_state==EN_CONNECT_STATE)
 	{

@@ -18,7 +18,7 @@ extern void bt_name_modify(char* name);
 
 void control_send_data(uint8_t* data, uint16_t len)
 {
-	
+	uart2_send(data, len);
 }
 
 /*****************************************************************************

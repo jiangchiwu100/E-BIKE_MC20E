@@ -7,6 +7,7 @@
 #include "IoT_Hub.h"
 #include "control_app.h"
 #include "queen.h"
+#include "Exti.h"
 
 extern RTC_HandleTypeDef hrtc;
 extern gps_info_struct gps_info;
@@ -328,15 +329,31 @@ void upload_alarm_package(void)
 	uint8_t package_len = 0;
 	alarm_struct alarm_info = {0};
 
-	alarm_info.speed_ind = 1;
-	alarm_info.speed = 50;
-	alarm_info.vibr_ind = 1;
-	alarm_info.vibr_value = 10;
-	alarm_info.pwr_off_ind = 1;
+	*(uint8_t*)&g_config.alarm_switch = 0xff;	//使能所有告警开关
+
+	if(curr_speed >= 40)
+	{
+		alarm_info.speed_ind = 1;
+		alarm_info.speed = curr_speed*100;
+	}
+	
+	if(check_sharp_zhendong() && !get_electric_gate_status())
+	{
+		alarm_info.vibr_ind = 1;
+		alarm_info.vibr_value = diff_shake;
+	}
+	else
+		alarm_info.vibr_ind = 0;
+
+	if(get_bat_connect_status())
+		alarm_info.pwr_off_ind = 0;
+	else
+		alarm_info.pwr_off_ind = 1;
 	
 	ind = alarm_info.pwr_low_ind << EN_GT_AT_PWR_LOW | (alarm_info.pwr_off_ind << EN_GT_AT_PWR_OFF) 
 		|(alarm_info.vibr_ind << EN_GT_AT_VIBR)|(alarm_info.oil_pwr_ind << EN_GT_AT_OIL_PWR)
 		|(alarm_info.speed_ind << EN_GT_AT_SPEED);
+
 	
 	for(i = 0; i < EN_GT_AT_END; i++)
 	{	
@@ -350,6 +367,7 @@ void upload_alarm_package(void)
 					alarm_pkg.value_len = sizeof(alarm_info.vibr_value);
 					alarm_pkg.value[0] = alarm_info.vibr_value;
 					is_update = true;
+					Logln(D_INFO,"VIB ALARM");
 				}
 
 				//本次数据已经处理完毕，清除数据标志
@@ -365,6 +383,7 @@ void upload_alarm_package(void)
 					alarm_pkg.value[0] = (alarm_info.speed>>8)&0xff;
 					alarm_pkg.value[1] = alarm_info.speed&0xff;
 					is_update = true;
+					Logln(D_INFO,"SPEED ALARM");
 				}
 
 				//本次数据已经处理完毕，清除数据标志
@@ -379,6 +398,7 @@ void upload_alarm_package(void)
 					alarm_pkg.value_len = sizeof(alarm_info.pwr_level);
 					alarm_pkg.value[0] = alarm_info.pwr_level;
 					is_update = true;
+					Logln(D_INFO,"POWER LOW ALARM");
 				}
 
 				//本次数据已经处理完毕，清除数据标志
@@ -392,6 +412,7 @@ void upload_alarm_package(void)
 					alarm_pkg.type = EN_GT_AT_PWR_OFF;
 					alarm_pkg.value_len = 0;
 					is_update = true;
+					Logln(D_INFO,"POWER OFF ALARM");
 				}
 
 				//本次数据已经处理完毕，清除数据标志
@@ -715,7 +736,7 @@ void push_interval_package_process(void)
 			msgType.Data[0] = AT_UP_GPS;
 			PushElement(&at_send_Queue, msgType, 1);
 		}
-		else 	if((delay_index+1)%30==0)
+		else if((delay_index+1)%30==0)
 		{
 			msgType.Data[0] = AT_UP_ALARM;
 			PushElement(&at_send_Queue, msgType, 1);
@@ -768,7 +789,8 @@ void push_interval_package_process(void)
 				flag = true;
 			}
 		}
-		
+
+		control_process();	//	与控制器的命令交互
 		delay_index++;
 
 		if(delay_index>59)
