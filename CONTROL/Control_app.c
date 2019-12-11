@@ -213,6 +213,7 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 					zt_controller_send(ADDR_CONTROL, CMD_CONTROL,1,LOW_SPEED);
 					controller.require.tiaosu = LOW_SPEED;
 				}
+				write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 				break;
 			case QIANYA_CMD:
 				if(cmd->para[0]==0)
@@ -225,6 +226,7 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 					zt_controller_send(ADDR_CONTROL,CMD_CONTROL,2,LOW);
 					controller.require.qianya = LOW;
 				}
+				write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 				break;
 			case ZHULI_CMD:
 				if(cmd->para[0]==0)
@@ -252,6 +254,7 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 					zt_controller_send(ADDR_CONTROL,CMD_CONTROL,3,HUNHE); 
 					controller.require.zhuli = HUNHE;
 				}
+				write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 				break;
 			case XIUFU_CMD:
 				if(cmd->para[0]==1)
@@ -264,6 +267,7 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 					zt_controller_send(ADDR_CONTROL,CMD_CONTROL,4,XF_INVALID);
 					controller.require.xf = XF_INVALID;
 				}
+				write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 				break;
 			case DIANYUAN_CMD:
 				if(cmd->para[0]==0)//36V
@@ -276,6 +280,7 @@ void parse_network_cmd(ebike_cmd_struct *cmd)
 					zt_controller_send(ADDR_CONTROL,CMD_CONTROL,5, VOT48V);
 					controller.require.dy = VOT48V;
 				}
+				write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 				break;
 			case DIANJI_CMD:
 				if(cmd->para[0]==0)	//ÆÕÍ¨µç»ú
@@ -628,9 +633,13 @@ void key_check_process(void)
 void init_flash(void)
 {
 	read_flash(CONFIG_ADDR,(uint8_t*)&g_flash,(uint16_t)sizeof(flash_struct));
+	read_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
+	
 	HAL_Delay(1);
 	Logln(D_INFO,"flag=%d,mode=%d,imei=%s,acc=%d,hall=%d,ld=%d,motot=%d,ld_a=%d,zd_a=%d,zd_se=%d,times=%d,gb_a=%d,gb_s=%d,lj=%d,cg=%d,%s:%d,vol=%d,size=%d",g_flash.flag,g_flash.mode,g_flash.imei,g_flash.acc,g_flash.hall,g_flash.lundong,
 		g_flash.motor,g_flash.ld_alarm,g_flash.zd_alarm,g_flash.zd_sen,g_flash.search_times,g_flash.gb_alarm,g_flash.gb_speed,g_flash.lunjing,g_flash.cigang,g_flash.net.domain, g_flash.net.port, g_flash.adc_vol,sizeof(flash_struct));
+
+	Logln(D_INFO,"tiaosu=%d,qianya=%d,zhuli=%d,dy=%d", controller.require.tiaosu, controller.require.qianya, controller.require.zhuli, controller.require.dy);
 		
 	if(g_flash.flag !=1)
 	{
@@ -657,9 +666,20 @@ void init_flash(void)
 		g_flash.net.port = PORT;
 		g_flash.mode = 0;
 		write_flash(CONFIG_ADDR, (uint8_t*)&g_flash,(uint16_t)sizeof(flash_struct));
+
+		controller.require.fault = 0;
+		controller.require.hall = 0;
+		controller.require.tiaosu = LOW_SPEED;
+		controller.require.qianya = HIGH;
+		controller.require.zhuli = HUNHE;
+		controller.require.dy = VOT48V;
+		controller.require.xf = XF_INVALID;
+		write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
+		
 		HAL_Delay(1);
 	}
 
+	
 	if(g_flash.acc&(BT_OPEN|GPRS_OPEN|KEY_OPEN))
 	{
 		open_electric_door();

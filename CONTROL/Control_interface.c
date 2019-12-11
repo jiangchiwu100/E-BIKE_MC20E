@@ -112,6 +112,7 @@ bool control_proc(uint8_t* buf, uint16_t len)
 			controller.actual.zhuli = buf[10];
 			controller.actual.dy = buf[11];
 			controller.actual.xf = buf[12];
+			write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 			Logln(D_INFO,"Recv Upload tiaosu=%d,qy=%d,zhuli=%d,dianyuan=%d,xiufu=%d",controller.actual.tiaosu,controller.actual.qianya,
 				controller.actual.zhuli,controller.actual.dy,controller.actual.xf);
 		}
@@ -294,6 +295,8 @@ bool parse_control_cmd(uint8_t* buf, uint16_t len)
 		{
 			memset((uint8_t*)&g_flash, 0, sizeof(flash_struct));
 			write_flash(CONFIG_ADDR, (uint8_t*)&g_flash,(uint16_t)sizeof(flash_struct));
+			memset(&controller, 0, sizeof(control_struct));
+			write_flash(CONFIG_ADDR2, (uint8_t*)&controller, (uint16_t)sizeof(control_struct));
 			Logln(D_INFO, "format flash OK........");
 			reset_system();
 		}

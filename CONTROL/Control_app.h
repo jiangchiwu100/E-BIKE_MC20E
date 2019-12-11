@@ -165,6 +165,7 @@ void control_process(void);
 
 
 #define CONFIG_ADDR 0x03	//0x0800D000
+#define CONFIG_ADDR2 (CONFIG_ADDR+sizeof(flash_struct))
 extern flash_struct g_flash;
 
 //#define __WAIMAI__	
